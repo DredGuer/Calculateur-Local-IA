@@ -8,7 +8,11 @@
 
 ```
 Version-en-cours/
-├── calculateur_v5.2.html    # Interface principale (HTML/CSS/JS)
+├── index.html               # Interface principale
+├── css/
+│   └── style.css            # Styles CSS
+├── js/
+│   └── app.js               # Logique JavaScript
 ├── models.js                # Base de données des modèles (40+ LLM)
 └── README.md                # Ce fichier
 ```
