@@ -161,15 +161,14 @@ const PRESETS = {
 
   // ── GEMMA 4 ─────────────────────────────────────────────
   // Source: ollama.com/library/gemma4 + Google DeepMind card
-  // E2B / E4B = "Effective" params (MoE edge models)
-  // E2B: 7.2GB GGUF Q4 ≈ 13B total, 2B actifs
-  // E4B: 9.6GB GGUF Q4 ≈ 17B total, 4B actifs
-  // 26B: MoE 26B total, 4B actifs (ctx 256K)
-  // 31B: Dense 31B (ctx 256K)
-  gemma4_e2b:  { params:13,    hidden:2048,  layers:26,  heads:8,   kv:4,  moe:15,  ctx:131072,  ollama:'gemma4:e2b',   hfid:'google/gemma-4-e2b-it',  tags:['vision','thinking','conversation'], note:'MoE edge · 2B actifs sur 13B' },
-  gemma4_e4b:  { params:17,    hidden:3072,  layers:28,  heads:12,  kv:4,  moe:24,  ctx:131072,  ollama:'gemma4:e4b',   hfid:'google/gemma-4-e4b-it',  tags:['vision','thinking','conversation'], note:'MoE edge · 4B actifs sur 17B' },
-  gemma4_26b:  { params:26,    hidden:4096,  layers:42,  heads:16,  kv:8,  moe:15,  ctx:262144,  ollama:'gemma4:26b',   hfid:'google/gemma-4-26b-it',  tags:['vision','thinking','code'],         note:'MoE · 4B actifs · ctx 256K' },
-  gemma4_31b:  { params:31,    hidden:5120,  layers:46,  heads:20,  kv:10, moe:100, ctx:262144,  ollama:'gemma4:31b',   hfid:'google/gemma-4-31b-it',  tags:['vision','thinking','code','math'],  note:'Dense · ctx 256K' },
+  // E2B: 5.1B total params, 2.3B effective, 35 layers, 128K ctx, MoE, multimodal (text+image+audio)
+  // E4B: 8B total params, 4.5B effective, 42 layers, 128K ctx, MoE, multimodal (text+image+audio)
+  // 26B: 25.2B total, 3.8B active, 30 layers, 256K ctx, MoE, multimodal (text+image), 8/128 experts
+  // 31B: 30.7B dense, 60 layers, 256K ctx, multimodal (text+image)
+  gemma4_e2b:  { params:5.1,   hidden:2560,  layers:35,  heads:16,  kv:4,  moe:45,  ctx:131072,  ollama:'gemma4:e2b',   hfid:'google/gemma-4-e2b-it',  tags:['vision','thinking','conversation','multilingual'], note:'MoE · 2.3B actifs/5.1B · multimodal' },
+  gemma4_e4b:  { params:8,     hidden:3072,  layers:42,  heads:20,  kv:4,  moe:56,  ctx:131072,  ollama:'gemma4:e4b',   hfid:'google/gemma-4-e4b-it',  tags:['vision','thinking','conversation','multilingual'], note:'MoE · 4.5B actifs/8B · multimodal' },
+  gemma4_26b:  { params:25.2,  hidden:4096,  layers:30,  heads:16,  kv:8,  moe:15,  ctx:262144,  ollama:'gemma4:26b',   hfid:'google/gemma-4-26b-it',  tags:['vision','thinking','code'],         note:'MoE · 3.8B actifs/25.2B · 8/128 experts · ctx 256K' },
+  gemma4_31b:  { params:30.7,  hidden:5120,  layers:60,  heads:20,  kv:10, moe:100, ctx:262144,  ollama:'gemma4:31b',   hfid:'google/gemma-4-31b-it',  tags:['vision','thinking','code','math'],  note:'Dense · ctx 256K · multimodal' },
 
   // ── GEMMA 3 ─────────────────────────────────────────────
   gemma3_1b:   { params:1,     hidden:1152,  layers:26,  heads:4,   kv:1,  moe:100, ctx:32768,   ollama:'gemma3:1b',    hfid:'google/gemma-3-1b-it',   tags:['conversation'],                    note:'Edge · ctx 32K' },

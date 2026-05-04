@@ -121,16 +121,16 @@ Version-en-cours/
 ## 📊 Modèles supportés (40+)
 
 ### 🟣 **Google DeepMind**
-| Modèle | Paramètres | Contexte | Type | Ollama |
-|--------|------------|----------|------|--------|
-| Gemma 4 E2B | 13B (2B actifs) | 128K | MoE | `gemma4:e2b` |
-| Gemma 4 E4B | 17B (4B actifs) | 128K | MoE | `gemma4:e4b` |
-| Gemma 4 26B | 26B (4B actifs) | 256K | MoE | `gemma4:26b` |
-| Gemma 4 31B | 31B | 256K | Dense | `gemma4:31b` |
-| Gemma 3 1B | 1B | 32K | Dense | `gemma3:1b` |
-| Gemma 3 4B | 4B | 128K | Dense | `gemma3:4b` |
-| Gemma 3 12B | 12B | 128K | Dense | `gemma3:12b` |
-| Gemma 3 27B | 27B | 128K | Dense | `gemma3:27b` |
+| Modèle | Paramètres | Contexte | Type | Modalités | Ollama |
+|--------|------------|----------|------|-----------|--------|
+| Gemma 4 E2B | 5.1B (2.3B actifs) | 128K | MoE | Texte, Image, Audio | `gemma4:e2b` |
+| Gemma 4 E4B | 8B (4.5B actifs) | 128K | MoE | Texte, Image, Audio | `gemma4:e4b` |
+| Gemma 4 26B | 25.2B (3.8B actifs) | 256K | MoE | Texte, Image | `gemma4:26b` |
+| Gemma 4 31B | 30.7B | 256K | Dense | Texte, Image | `gemma4:31b` |
+| Gemma 3 1B | 1B | 32K | Dense | Texte | `gemma3:1b` |
+| Gemma 3 4B | 4B | 128K | Dense | Texte, Image | `gemma3:4b` |
+| Gemma 3 12B | 12B | 128K | Dense | Texte, Image | `gemma3:12b` |
+| Gemma 3 27B | 27B | 128K | Dense | Texte, Image | `gemma3:27b` |
 
 ### 🔵 **Alibaba (Qwen)**
 | Modèle | Paramètres | Contexte | Type | Tags |
