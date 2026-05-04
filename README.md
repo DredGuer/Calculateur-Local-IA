@@ -250,6 +250,18 @@ Version-en-cours/
 | RX 7900 XTX | 24 GB | 960 | 355 |
 | AMD MI300X | 192 GB | 5300 | 750 |
 
+### 📱 **Smartphones** (Mémoire partagée RAM)
+| Modèle | VRAM | Bande passante (GB/s) | TDP (W) |
+|--------|------|----------------------|---------|
+| iPhone 15 Pro | 8 GB | 50 | 15 |
+| iPhone 15 Pro Max | 8 GB | 50 | 18 |
+| iPhone 16 Pro | 12 GB | 60 | 18 |
+| Samsung Galaxy S24 Ultra | 12 GB | 70 | 15 |
+| Google Pixel 8 Pro | 12 GB | 65 | 12 |
+| Samsung Galaxy S25 Ultra | 16 GB | 80 | 18 |
+
+> ⚠️ **Note** : Les smartphones ont une mémoire **partagée** (RAM = VRAM). Les performances d'inférence sont limitées par la RAM disponible et la bande passante mémoire. Seuls les petits modèles (< 8B en INT4) sont réalistes sur smartphone.
+
 ---
 
 ## 🎨 Interface Utilisateur

@@ -27,6 +27,13 @@ const HW = [
   // AMD
   { name:'RX 7900 XTX (24 GB)',         vram:24,  bw:960,  tdp:355, type:'amd'   },
   { name:'AMD MI300X (192 GB)',         vram:192, bw:5300, tdp:750, type:'amd'   },
+  // Smartphones — TDP = SoC power, VRAM = RAM (shared)
+  { name:'iPhone 15 Pro (8 GB)',        vram:8,   bw:50,   tdp:15,  type:'smartphone' },
+  { name:'iPhone 15 Pro Max (8 GB)',   vram:8,   bw:50,   tdp:18,  type:'smartphone' },
+  { name:'iPhone 16 Pro (12 GB)',       vram:12,  bw:60,   tdp:18,  type:'smartphone' },
+  { name:'Samsung S24 Ultra (12 GB)',   vram:12,  bw:70,   tdp:15,  type:'smartphone' },
+  { name:'Google Pixel 8 Pro (12 GB)',  vram:12,  bw:65,   tdp:12,  type:'smartphone' },
+  { name:'Samsung S25 Ultra (16 GB)',   vram:16,  bw:80,   tdp:18,  type:'smartphone' },
 ].sort((a,b)=>a.vram-b.vram);
 
 // Framework overhead: base GB + scale per B params
