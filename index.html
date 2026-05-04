@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM RAM/VRAM Calculator v5.2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Syne:wght@400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="wrap">
+
+<!-- ════════════════ HEADER ════════════════ -->
+<div class="hdr">
+  <div class="hdr-brand">
+    <div class="hdr-icon">🧠</div>
+    <div class="hdr-t">
+      <h1>LLM <em>RAM / VRAM</em> Calculator</h1>
+      <p>GQA-correct · Training réaliste · Throughput estimé · 40+ modèles · HuggingFace + llm-stats.com ready</p>
+      <div class="version-tag">⚡ v5.2 — Fix MoE débit · models.js · Par famille · Ollama cmd</div>
+    </div>
+  </div>
+  <div class="mode-pill">
+    <button class="mpb active" id="btnInfer" onclick="setMode('inference')">⚡ Inférence</button>
+    <button class="mpb"        id="btnTrain" onclick="setMode('training')">🔬 Entraînement</button>
+  </div>
+</div>
+
+<!-- ════════════════ MODEL CONFIG ════════════════ -->
+<div class="card" style="animation-delay:.02s">
+
+  <!-- Mode Auto / Manuel -->
+  <div class="imode-bar">
+    <div class="imode-pill">
+      <button class="imb active auto" id="imbAuto" onclick="setInputMode('auto')">⚡ Auto</button>
+      <button class="imb man"         id="imbMan"  onclick="setInputMode('manuel')">🔧 Manuel</button>
+    </div>
+    <span class="imode-desc" id="imode-desc">Sélectionne un modèle — les paramètres se remplissent automatiquement.</span>
+    <button class="btn-addmodel" onclick="openAddModal()">➕ Ajouter un modèle</button>
+  </div>
+
+  <!-- Category filter -->
+  <div class="cat-bar" id="catBar">
+    <button class="cat-pill active" data-cat="all"          onclick="setCat(this,'all')">🌐 Tous</button>
+    <button class="cat-pill"        data-cat="thinking"     onclick="setCat(this,'thinking')">🧠 Thinking</button>
+    <button class="cat-pill"        data-cat="code"         onclick="setCat(this,'code')">💻 Code</button>
+    <button class="cat-pill"        data-cat="math"         onclick="setCat(this,'math')">📐 Math</button>
+    <button class="cat-pill"        data-cat="vision"       onclick="setCat(this,'vision')">👁️ Vision</button>
+    <button class="cat-pill"        data-cat="conversation" onclick="setCat(this,'conversation')">💬 Conversation</button>
+    <button class="cat-pill"        data-cat="multilingual" onclick="setCat(this,'multilingual')">🌍 Multilingual</button>
+  </div>
+
+  <!-- Model select row -->
+  <div class="g3 mb12">
+    <div class="fld full">
+      <label>Modèle</label>
+      <select id="modelPreset">
+        <optgroup label="── 🔧 Personnalisé ──">
+          <option value="custom">🔧 Saisie manuelle / Autre modèle</option>
+        </optgroup>
+        <!-- Options générées dynamiquement depuis models.js MODEL_FAMILIES au boot -->
+        <optgroup label="💾 Mes modèles sauvegardés" id="customModelsGroup"></optgroup>
+      </select>
+    </div>
+  </div>
+
+  <!-- ALERT: cloud-only model -->
+  <div class="alert red" id="cloudBanner" style="display:none">
+    <span class="alert-icon">☁️</span>
+    <span>Modèle <strong>cloud-only</strong> — aucun poids local disponible. Estimation mémoire = taille théorique si tu hébergeais ce modèle. Commande Ollama : <code id="cloudOllamaCmd" style="font-family:monospace;background:rgba(239,68,68,.1);padding:1px 5px;border-radius:4px"></code></span>
+  </div>
+
+  <!-- Ollama pull command banner -->
+  <div class="alert" style="background:rgba(34,211,238,.06);border-color:var(--cyan-br);color:var(--cyan);display:none" id="ollamaBanner">
+    <span class="alert-icon">🦙</span>
+    <span style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      Lancer localement :
+      <code id="ollamaCmd" style="font-family:'JetBrains Mono',monospace;font-size:.82rem;background:rgba(34,211,238,.1);padding:3px 10px;border-radius:6px;cursor:pointer" onclick="navigator.clipboard?.writeText(this.textContent).then(()=>this.style.opacity='.5').catch(()=>{});" title="Cliquer pour copier"></code>
+      <span style="font-size:.68rem;color:rgba(34,211,238,.5)">(cliquer pour copier)</span>
+    </span>
+  </div>
+
+  <!-- ALERT: custom mode -->
+  <div class="alert amber" id="customAlert" style="display:none">
+    <span class="alert-icon">🔧</span>
+    <span>Mode <strong>saisie manuelle</strong> — renseigne tous les paramètres ci-dessous. Retrouve les valeurs exactes dans le <code>config.json</code> du modèle sur HuggingFace.</span>
+  </div>
+
+  <!-- ── SECTION AUTO : Quant + Contexte uniquement ── -->
+  <div id="secAuto">
+    <div class="g3">
+      <div class="tip-wrap">
+        <div class="tip-bubble"><strong>Quantification</strong>Niveau de compression des poids du modèle. INT4 = 4× moins lourd que FP32, mais légèrement moins précis. En pratique, INT4/INT8 sont les meilleurs compromis pour l'inférence locale.</div>
+        <label class="tip-label">Quantification <i class="tip-icon">?</i></label>
+        <div class="range-row">
+          <input type="range" id="quantBits" min="2" max="32" step="1" value="4">
+          <span class="rbadge" id="qBadge">4 bits · INT4</span>
+        </div>
+      </div>
+      <div class="tip-wrap">
+        <div class="tip-bubble"><strong>Contexte (tokens)</strong>La "mémoire de travail" du modèle — combien de mots peut-il lire en une seule fois ? Plus c'est long, plus le KV Cache grossit et consomme de la VRAM.</div>
+        <label class="tip-label">Contexte <span class="h">(tokens)</span> <i class="tip-icon">?</i></label>
+        <input type="number" id="contextLen" value="4096" min="1" step="512">
+      </div>
+      <div class="tip-wrap">
+        <div class="tip-bubble"><strong>Framework runtime</strong>Le logiciel qui fait tourner le modèle. Chaque framework ajoute un overhead système différent — llama.cpp est le plus léger, PyTorch le plus gourmand.</div>
+        <label class="tip-label">Framework <i class="tip-icon">?</i></label>
+        <select id="frameworkSelAuto">
+          <option value="llamacpp">llama.cpp / MLX (Apple)</option>
+          <option value="ollama">Ollama</option>
+          <option value="vllm" selected>vLLM</option>
+          <option value="tgi">HuggingFace TGI</option>
+          <option value="pytorch">PyTorch / Transformers</option>
+          <option value="exllamav2">ExLlamaV2</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SECTION MANUEL : tous les paramètres ── -->
+  <div id="secManuel" style="display:none">
+    <div class="g3 mb12">
+      <div class="tip-wrap">
+        <div class="tip-bubble"><strong>Paramètres (milliards)</strong>Le nombre total de "réglages" appris par le modèle. Plus il y en a, plus il est capable — mais plus il prend de place en mémoire.</div>
+        <label class="tip-label">Paramètres <span class="h">(B)</span> <i class="tip-icon">?</i></label>
+        <input type="number" id="paramsB" value="8" min="0.1" step="0.1">
+      </div>
+      <div class="tip-wrap">
+        <div class="tip-bubble"><strong>Hidden size</strong>La "largeur" des vecteurs internes du modèle. Multiplie directement la taille des poids et du KV cache. Valeur typique : 4096 pour un 7B, 8192 pour un 70B.</div>
+        <label class="tip-label">Hidden size <i class="tip-icon">?</i></label>
+        <input type="number" id="hiddenSize" value="4096" min="1" step="64">
+      </div>
+      <div class="tip-wrap">
+        <div class="tip-bubble"><strong>Num layers — "Étapes de réflexion"</strong>Combien d'étapes de traitement fait le modèle avant de répondre ? Chaque couche raffine la compréhension. Plus il y en a, plus le modèle est "profond" et réfléchi.</div>
+        <label class="tip-label">Num layers <i class="tip-icon">?</i></label>
+        <input type="number" id="numLayers" value="32" min="1" step="1">
+      </div>
+      <div class="tip-wrap">
+        <div class="tip-bubble"><strong>Num heads — "Lecteurs parallèles"</strong>Combien de "lecteurs" analysent le texte en même temps ? Chaque tête d'attention se concentre sur un aspect différent (syntaxe, sémantique, relations…). Plus il y en a, plus l'analyse est riche.</div>
+        <label class="tip-label">Num heads <i class="tip-icon">?</i></label>
+        <input type="number" id="numHeads" value="32" min="1" step="1">
+      </div>
+      <div class="tip-wrap">
+        <div class="tip-bubble"><strong>KV heads — "Post-it de contexte"</strong>Combien de "post-it" le modèle utilise pour se souvenir de la conversation ? Avec GQA/MQA, plusieurs têtes partagent le même post-it → moins de VRAM. Si kv_heads &lt; num_heads, c'est un modèle GQA.</div>
+        <label class="tip-label">KV heads <i class="tip-icon">?</i></label>
+        <input type="number" id="kvHeads" value="8" min="1" step="1">
+      </div>
+      <div class="tip-wrap">
+        <div class="tip-bubble"><strong>MoE actif (%)</strong>Pour les modèles Mixture-of-Experts : seule une fraction des experts est activée par token. Ex: Mixtral 8×7B active 2/8 experts = 25 %. Tous les poids sont chargés en RAM, mais seuls X % "pensent" vraiment.</div>
+        <label class="tip-label">MoE actif <span class="h">(%)</span> <i class="tip-icon">?</i></label>
+        <input type="number" id="moeActive" value="100" min="10" max="100" step="5">
+      </div>
+    </div>
+
+    <div class="sep"></div>
+
+    <div class="g3">
+      <div class="tip-wrap">
+        <div class="tip-bubble"><strong>Quantification</strong>Niveau de compression des poids. INT4 = 4× moins lourd que FP32 avec une légère perte de précision. Recommandé pour l'inférence locale.</div>
+        <label class="tip-label">Quantification <i class="tip-icon">?</i></label>
+        <div class="range-row">
+          <input type="range" id="quantBitsM" min="2" max="32" step="1" value="4">
+          <span class="rbadge" id="qBadgeM">4 bits · INT4</span>
+        </div>
+      </div>
+      <div class="tip-wrap">
+        <div class="tip-bubble"><strong>Contexte (tokens)</strong>La mémoire de travail du modèle — combien de tokens dans la fenêtre de contexte. Chaque token supplémentaire grossit le KV cache.</div>
+        <label class="tip-label">Contexte <span class="h">(tokens)</span> <i class="tip-icon">?</i></label>
+        <input type="number" id="contextLenM" value="4096" min="1" step="512">
+      </div>
+      <div class="tip-wrap">
+        <div class="tip-bubble"><strong>Batch size — "Questions simultanées"</strong>Combien de requêtes différentes le modèle traite en même temps. Batch=1 = une seule conversation. Augmenter multiplie le KV cache proportionnellement (utile en serveur).</div>
+        <label class="tip-label">Batch size <i class="tip-icon">?</i></label>
+        <input type="number" id="batchSize" value="1" min="1" step="1">
+      </div>
+      <div class="tip-wrap">
+        <div class="tip-bubble"><strong>Précision KV (bits) — "Détail de la mémoire"</strong>À quel niveau de détail le modèle stocke-t-il le contexte dans le KV cache ? FP16 (16 bits) = précision standard. FP8/INT8 = deux fois moins de VRAM, légèrement moins fidèle.</div>
+        <label class="tip-label">Précision KV <span class="h">(bits)</span> <i class="tip-icon">?</i></label>
+        <input type="number" id="kvBitsIn" value="16" min="4" max="32" step="2">
+      </div>
+      <div class="tip-wrap">
+        <div class="tip-bubble"><strong>Framework runtime</strong>Le logiciel qui exécute le modèle. Chaque framework a un overhead système différent qui scale avec la taille du modèle.</div>
+        <label class="tip-label">Framework <i class="tip-icon">?</i></label>
+        <select id="frameworkSel">
+          <option value="llamacpp">llama.cpp / MLX (Apple)</option>
+          <option value="ollama">Ollama</option>
+          <option value="vllm" selected>vLLM</option>
+          <option value="tgi">HuggingFace TGI</option>
+          <option value="pytorch">PyTorch / Transformers</option>
+          <option value="exllamav2">ExLlamaV2</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /card config -->
+
+<!-- ── ADD MODEL MODAL ── -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeAddModal()">✕</button>
+    <h3>➕ Ajouter un modèle personnalisé</h3>
+    <p class="modal-sub">Saisi les paramètres du modèle — ils seront stockés localement dans ton navigateur (localStorage) et apparaîtront dans la liste "Mes modèles sauvegardés".</p>
+    <div class="g3 mb12">
+      <div class="tip-wrap full">
+        <label class="tip-label">Nom affiché</label>
+        <input type="text" id="am_name" placeholder="ex: Qwen3.6 35B FP8" style="font-family:'DM Sans',sans-serif">
+      </div>
+      <div class="tip-wrap full">
+        <label class="tip-label">ID HuggingFace <span class="h">(optionnel)</span></label>
+        <input type="text" id="am_hfid" placeholder="ex: Qwen/Qwen3.6-35B-A3B-FP8" style="font-family:'DM Sans',sans-serif">
+      </div>
+    </div>
+    <div class="g3">
+      <div class="fld"><label>Paramètres <span class="h">(B)</span></label><input type="number" id="am_params" value="7" min="0.1" step="0.1"></div>
+      <div class="fld"><label>Hidden size</label><input type="number" id="am_hidden" value="4096" min="1" step="64"></div>
+      <div class="fld"><label>Num layers</label><input type="number" id="am_layers" value="32" min="1" step="1"></div>
+      <div class="fld"><label>Num heads</label><input type="number" id="am_heads" value="32" min="1" step="1"></div>
+      <div class="fld"><label>KV heads</label><input type="number" id="am_kv" value="8" min="1" step="1"></div>
+      <div class="fld"><label>MoE actif <span class="h">(%)</span></label><input type="number" id="am_moe" value="100" min="10" max="100" step="5"></div>
+    </div>
+    <div id="am_error" style="color:var(--red);font-size:.76rem;margin-top:8px;display:none"></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeAddModal()">Annuler</button>
+      <button class="btn-primary" onclick="saveCustomModel()">💾 Sauvegarder</button>
+    </div>
+    <div style="margin-top:18px">
+      <div class="ct" style="font-size:.62rem">Modèles sauvegardés</div>
+      <div class="custom-model-list" id="cmList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ TRAINING CONFIG ════════════════ -->
+<div class="card" id="trainCard" style="display:none;animation-delay:.06s">
+  <div class="ct">
+    Paramètres d'entraînement
+    <span class="ct-badge">⚠️ Correctif v4</span>
+  </div>
+
+  <div class="alert amber" id="trainWarn">
+    <span class="alert-icon">⚠️</span>
+    <span>Le multiplicateur <strong>3.5× de la v3 était trop optimiste</strong>. En réalité : Full fine-tuning ≈ <strong>8×</strong>, LoRA ≈ <strong>4×</strong>, QLoRA ≈ <strong>2×</strong>. Un modèle qui "rentre" avec ×3.5 peut nécessiter le double en pratique.</span>
+  </div>
+
+  <div class="fld mb12">
+    <label>Méthode d'entraînement</label>
+    <div class="pills" id="trainMethodPills">
+      <button class="pill red" data-mult="8" data-label="Full FT" onclick="setTrainMethod(this)">🔥 Full Fine-Tuning (×8)</button>
+      <button class="pill amber active" data-mult="5.5" data-label="PEFT" onclick="setTrainMethod(this)">🎛️ PEFT / LoRA (×5.5)</button>
+      <button class="pill cyan" data-mult="3" data-label="QLoRA" onclick="setTrainMethod(this)">💡 QLoRA (×3)</button>
+      <button class="pill purple" data-mult="0" data-label="custom" onclick="setTrainMethod(this)">🔧 Personnalisé</button>
+    </div>
+  </div>
+
+  <div id="customMultRow" style="display:none">
+    <div class="fld">
+      <label>Multiplicateur personnalisé <span class="h">(×N les poids)</span></label>
+      <div class="range-row">
+        <input type="range" id="customMult" min="1.5" max="12" step="0.5" value="5.5">
+        <span class="rbadge" id="multBadge">×5.5</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ KV CACHE OPTIMISATIONS ════════════ -->
+<div class="card" style="animation-delay:.09s">
+  <div class="ct">
+    Optimisations KV Cache
+    <span class="ct-badge">Nouveau v4</span>
+  </div>
+  <div class="alert amber" style="margin-bottom:12px">
+    <span class="alert-icon">💡</span>
+    <span>Ces technologies de production <strong>réduisent significativement</strong> les besoins en VRAM. Coche celles que tu utilises pour obtenir une estimation réaliste de déploiement.</span>
+  </div>
+  <div class="optim-grid">
+    <div class="optim-card" id="opt_paged" onclick="toggleOptim('paged')">
+      <div class="og-check" id="chk_paged"></div>
+      <div>
+        <h4>PagedAttention (vLLM)</h4>
+        <p>Gestion paginée de la mémoire — élimine la fragmentation et le sur-provisionnement du KV cache.</p>
+        <div class="og-factor">KV cache ×0.75</div>
+      </div>
+    </div>
+    <div class="optim-card" id="opt_fp8kv" onclick="toggleOptim('fp8kv')">
+      <div class="og-check" id="chk_fp8kv"></div>
+      <div>
+        <h4>Quantification KV FP8</h4>
+        <p>Quantifie les clés/valeurs en FP8 au lieu de FP16 — divise la mémoire du KV cache par 2.</p>
+        <div class="og-factor">KV cache ×0.5</div>
+      </div>
+    </div>
+    <div class="optim-card" id="opt_int8kv" onclick="toggleOptim('int8kv')">
+      <div class="og-check" id="chk_int8kv"></div>
+      <div>
+        <h4>Quantification KV INT8</h4>
+        <p>Alternative à FP8, légèrement moins précise mais très supportée (llama.cpp, TGI).</p>
+        <div class="og-factor">KV cache ×0.5</div>
+      </div>
+    </div>
+    <div class="optim-card" id="opt_flashattn" onclick="toggleOptim('flashattn')">
+      <div class="og-check" id="chk_flashattn"></div>
+      <div>
+        <h4>FlashAttention-2/3</h4>
+        <p>Réduit les activations intermédiaires en attention. Surtout utile à grande longueur de contexte.</p>
+        <div class="og-factor">Overhead ×0.7</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overhead dynamique -->
+  <div class="sep"></div>
+  <div class="g2">
+    <div class="fld">
+      <label>Framework runtime <span class="ct-badge" style="font-size:.58rem;margin-left:4px">overhead dynamique v4</span></label>
+      <select id="frameworkSel">
+        <option value="llamacpp">llama.cpp / MLX (Apple)</option>
+        <option value="ollama">Ollama</option>
+        <option value="vllm" selected>vLLM</option>
+        <option value="tgi">HuggingFace TGI</option>
+        <option value="pytorch">PyTorch / Transformers (HF)</option>
+        <option value="exllamav2">ExLlamaV2</option>
+      </select>
+    </div>
+    <div class="rc" style="background:var(--s2);padding:12px 14px;align-self:end">
+      <div class="rc-lbl">📦 Overhead calculé</div>
+      <div class="rc-val" id="dynOverhead" style="font-size:1.2rem">—</div>
+      <div class="rc-sub" id="dynOverheadSub"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ RESULTS ════════════════ -->
+<div class="card" style="animation-delay:.12s">
+  <div class="ct">Estimation mémoire</div>
+  <div class="res-grid" style="margin-bottom:12px">
+    <div class="rc">
+      <div class="rc-lbl">⚖️ Poids modèle</div>
+      <div class="rc-val" id="rW">—</div>
+      <div class="rc-sub" id="rWSub"></div>
+    </div>
+    <div class="rc">
+      <div class="rc-lbl">🗃️ Cache KV</div>
+      <div class="rc-val" id="rKV">—</div>
+      <div class="rc-sub" id="rKVSub"></div>
+    </div>
+    <div class="rc">
+      <div class="rc-lbl">📦 Overhead runtime</div>
+      <div class="rc-val" id="rOH">—</div>
+      <div class="rc-sub" id="rOHSub"></div>
+    </div>
+    <div class="rc tot">
+      <div class="rc-lbl">💿 TOTAL RAM / VRAM</div>
+      <div class="rc-val" id="rTot">—</div>
+      <div class="rc-sub" id="rTotSub"></div>
+    </div>
+  </div>
+
+  <!-- MoE / throughput warning -->
+  <div class="alert amber" id="moeAlert" style="display:none">
+    <span class="alert-icon">🔀</span>
+    <span id="moeAlertTxt"></span>
+  </div>
+  <div class="alert red" id="thrAlert" style="display:none">
+    <span class="alert-icon">⚡</span>
+    <span id="thrAlertTxt"></span>
+  </div>
+</div>
+
+<!-- ════════════════ BENCHMARKS ════════════════ -->
+<div class="card" style="animation-delay:.15s">
+  <div class="ct">Benchmarks & Performance</div>
+  <div class="src-toggle">
+    <button class="src-btn hf active" id="srcHF" onclick="setSource('hf')">
+      <span class="dot"></span>🤗 HuggingFace Open LLM Leaderboard
+    </button>
+    <button class="src-btn lls" id="srcLLS" onclick="setSource('lls')">
+      <span class="dot"></span>📊 llm-stats.com
+      <span class="lock-tag" id="llsLockTag">🔒 Clé requise</span>
+    </button>
+  </div>
+  <div class="key-panel" id="keyPanel">
+    <p>Demande une clé API sur <a href="https://llm-stats.com/developer" target="_blank">llm-stats.com/developer</a> puis colle-la ici.</p>
+    <div class="key-row">
+      <input type="password" id="llsApiKey" placeholder="lls_xxxxxxxxxxxxxxxxxxxx">
+      <button class="btn-save" onclick="saveLLSKey()">💾 Sauvegarder</button>
+    </div>
+    <span class="key-saved" id="keySaved">✅ Clé sauvegardée</span>
+  </div>
+  <div class="bm-search-row">
+    <div class="fld">
+      <label>ID modèle HuggingFace <span class="h">(auto-rempli)</span></label>
+      <input type="text" id="hfModelId" placeholder="ex: meta-llama/Meta-Llama-3-8B-Instruct">
+    </div>
+    <button class="btn-fetch" id="fetchBtn" onclick="fetchBenchmarks()">
+      <span id="fetchIcon">🔍</span> Chercher benchmarks
+    </button>
+  </div>
+  <div class="bm-state" id="bmIdle">⬆️ Sélectionne un modèle puis clique <strong style="color:var(--cyan)">Chercher benchmarks</strong></div>
+  <div class="bm-state" id="bmLoading" style="display:none"><div class="spinner"></div><span>Interrogation Open LLM Leaderboard…</span></div>
+  <div class="bm-state" id="bmEmpty"   style="display:none">❌ Modèle introuvable dans le leaderboard.<br>Essaie un ID plus court ou le nom de base (sans -Instruct).</div>
+  <div class="bm-state" id="bmError"   style="display:none"><span id="bmErrorMsg">⚠️ Erreur réseau.</span></div>
+  <!-- Hub fallback state: model found on HF Hub but not yet in leaderboard -->
+  <div style="display:none" id="bmHubFallback">
+    <div class="alert amber" style="margin-bottom:12px">
+      <span class="alert-icon">🔶</span>
+      <span><strong>Modèle non encore évalué par l'Open LLM Leaderboard.</strong><br>
+      Les modèles très récents (quantifiés, finetunes, nouveaux) ne sont pas forcément soumis.
+      Infos HF Hub ci-dessous — <a id="bmSubmitLink" href="#" target="_blank" style="color:var(--amber)">Soumettre ce modèle au leaderboard →</a></span>
+    </div>
+    <div class="bm-model-id">🤗 <span id="bmHubLabel"></span></div>
+    <div id="bmHubMeta" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:9px;margin-bottom:10px"></div>
+    <div class="src-credit">Source : <a href="https://huggingface.co" target="_blank">HuggingFace Hub API</a> · métadonnées du dépôt</div>
+  </div>
+  <div class="bm-found"  id="bmFound">
+    <div class="bm-model-id">🤗 <span id="bmModelLabel"></span></div>
+    <div class="bm-scores" id="bmScores"></div>
+    <div class="eff-badge">
+      <div>
+        <div class="eff-lbl">⚡ <strong>Ratio Perf / Ressource</strong></div>
+        <div class="eff-lbl" id="effDesc" style="margin-top:2px"></div>
+      </div>
+      <div>
+        <div class="eff-val" id="effVal">—</div>
+        <div class="eff-unit">pts MMLU-PRO / GB</div>
+      </div>
+    </div>
+    <div class="src-credit">Source : <a href="https://huggingface.co/spaces/open-llm-leaderboard/open_llm_leaderboard" target="_blank">Open LLM Leaderboard v2</a> · HuggingFace Datasets API</div>
+  </div>
+</div>
+
+<!-- ════════════════ HARDWARE ════════════════ -->
+<div class="card" style="animation-delay:.18s">
+  <div class="ct">Compatibilité matérielle + Recommandation <span class="ct-badge">v5.1</span></div>
+
+  <!-- Usage selector -->
+  <div style="margin-bottom:14px">
+    <div style="font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:8px">🎯 Usage cible — oriente la recommandation</div>
+    <div class="usage-bar">
+      <button class="usage-btn active" data-usage="general"      onclick="setUsage(this)">🌐 Général</button>
+      <button class="usage-btn"        data-usage="math"         onclick="setUsage(this)">📐 Math</button>
+      <button class="usage-btn"        data-usage="code"         onclick="setUsage(this)">💻 Dev / Code</button>
+      <button class="usage-btn"        data-usage="conversation" onclick="setUsage(this)">💬 Conversation</button>
+    </div>
+  </div>
+
+  <div class="hw-note">
+    🍎 <strong>Apple Silicon :</strong> mémoire unifiée (RAM = VRAM) — excellent pour LLMs via MLX / llama.cpp.&
+    🟢 <strong>NVIDIA / AMD :</strong> VRAM dédiée uniquement.&
+    ⚡ <strong>Tok/s</strong> estimé à batch=1. 🔋 <strong>TDP</strong> = consommation sous charge typique.
+    🏆 <strong>Meilleur choix</strong> = score combiné perf + énergie + débit.
+  </div>
+  <div class="hw-filters">
+    <button class="fbtn active" data-t="all"    onclick="setHWFilter(this,'all')">Tout</button>
+    <button class="fbtn"        data-t="apple"  onclick="setHWFilter(this,'apple')">🍎 Apple Silicon</button>
+    <button class="fbtn"        data-t="nvidia" onclick="setHWFilter(this,'nvidia')">🟢 NVIDIA</button>
+    <button class="fbtn"        data-t="amd"    onclick="setHWFilter(this,'amd')">🔴 AMD</button>
+  </div>
+  <div class="hw-grid" id="hwGrid"></div>
+</div>
+
+<!-- ════════════════ COMPETITION ════════════════ -->
+<div class="card" style="animation-delay:.21s">
+  <div class="ct">⚔️ Comparateur de modèles <span class="ct-badge">v5.1 — Nouveau</span></div>
+  <div class="alert amber" style="margin-bottom:14px">
+    <span class="alert-icon">💡</span>
+    <span>Ajoute plusieurs modèles avec leurs configs pour comparer leur consommation mémoire et leurs scores benchmarks côte à côte.</span>
+  </div>
+  <!-- Add row -->
+  <div class="comp-add-row">
+    <div class="fld">
+      <label style="font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted)">Modèle à ajouter</label>
+      <select id="compModelSel">
+        <option value="">— Choisir un modèle —</option>
+      </select>
+    </div>
+    <div class="fld" style="max-width:130px">
+      <label style="font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted)">Quant</label>
+      <select id="compQuantSel">
+        <option value="4">INT4 (4 bits)</option>
+        <option value="8">INT8 (8 bits)</option>
+        <option value="16">FP16 (16 bits)</option>
+        <option value="32">FP32 (32 bits)</option>
+      </select>
+    </div>
+    <button class="btn-comp-add" onclick="addToComp()">➕ Ajouter</button>
+    <button class="btn-ghost" style="padding:8px 14px;white-space:nowrap" onclick="clearComp()">🗑️ Vider</button>
+  </div>
+
+  <!-- Chips -->
+  <div class="comp-chip-list" id="compChips">
+  </div>
+
+  <!-- Chart or empty -->
+  <div class="comp-empty" id="compEmpty">➕ Ajoute au moins 2 modèles pour lancer la comparaison</div>
+  <div id="compChart" style="display:none">
+    <svg id="compSvg" class="comp-chart" height="240"></svg>
+    <div class="comp-legend" id="compLegend"></div>
+  </div>
+</div>
+
+<!-- ════════════════ FORMULAS ════════════════ -->
+<div class="fnote">
+  <strong>Formules v4 :</strong><br>
+  • <strong>Poids :</strong> <code>(params_B × moe_pct/100 × 10⁹ × quant_bits/8) / 1e9</code> → GB<br>
+  • <strong>Cache KV (GQA-correct) :</strong> <code>2 × layers × kv_heads × (hidden/heads) × ctx × batch × (kvBits/8) / 1e9 × optim_factor</code><br>
+  • <strong>Overhead dynamique :</strong> <code>base_framework + 0.015 × params_B</code> (scale avec la taille du modèle)<br>
+  • <strong>Entraînement :</strong> poids × méthode_mult (Full FT ×8, LoRA ×5.5, QLoRA ×3) — v3 utilisait ×3.5 fixe, sous-estimant le Full FT<br>
+  • <strong>Throughput estimé :</strong> <code>bw_GB_s / total_model_GB × 0.85</code> (efficacité mémoire ~85 %) → tok/s approximatif batch=1
+</div>
+<div class="tags">
+  <span class="tag">⚡ Temps réel</span>
+  <span class="tag">🧮 GQA/MQA correct</span>
+  <span class="tag">🔬 Training réaliste (×3–×8)</span>
+  <span class="tag">📦 Overhead dynamique</span>
+  <span class="tag">⚡ Throughput estimé</span>
+  <span class="tag">🤗 HF Leaderboard v2</span>
+  <span class="tag">📊 llm-stats.com ready</span>
+  <span class="tag">40+ modèles</span>
+</div>
+
+</div><!-- /wrap -->
+<script src="models.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
