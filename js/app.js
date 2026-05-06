@@ -110,7 +110,7 @@ function openAddModal() {
   $('addModal').classList.add('show');
 }
 function closeAddModal() { $('addModal').classList.remove('show') }
-function saveCustomModel() {
+async function saveCustomModel() {
   const name = $('am_name').value.trim();
   if (!name) { $('am_error').textContent='❌ Le nom est requis.'; $('am_error').style.display='block'; return }
   const params = parseFloat($('am_params').value);
@@ -134,6 +134,36 @@ function saveCustomModel() {
   // register in PRESETS + HF_IDS on the fly
   PRESETS['custom_' + id] = { params:model.params, hidden:model.hidden, layers:model.layers, heads:model.heads, kv:model.kv, moe:model.moe };
   if (hfid) HF_IDS['custom_' + id] = hfid;
+  
+  // Try to fetch scores from LOCAL_SCORES or HF API if hfid provided
+  if (hfid) {
+    const local = getLocalScores(hfid);
+    if (local) {
+      // Found in LOCAL_SCORES - save with model
+      model.scores = local.scores;
+      arr[arr.length-1] = model;
+      saveCustomModels(arr);
+    } else {
+      // Try to fetch from HF API in background (non-blocking, silent mode)
+      setTimeout(async () => {
+        try {
+          await fetchHFBenchmarks(hfid, true); // silent=true
+          if (lastBmData) {
+            model.scores = lastBmData.scores;
+            const updatedArr = loadCustomModels();
+            const idx = updatedArr.findIndex(m => m.id === id);
+            if (idx >= 0) {
+              updatedArr[idx].scores = lastBmData.scores;
+              saveCustomModels(updatedArr);
+            }
+          }
+        } catch(e) {
+          // Silently fail - scores will be fetched later when user clicks benchmark button
+        }
+      }, 100);
+    }
+  }
+  
   renderCustomModelsSelect();
   renderCustomModelChips();
   // reset form
@@ -744,10 +774,12 @@ function extractScoresFromDescription(description) {
 }
 
 // ─── MAIN FETCH (5-strategy cascade) ─────────────────────
-async function fetchHFBenchmarks(modelId) {
-  showBmState('loading');
-  $('fetchBtn').disabled = true;
-  $('fetchIcon').textContent = '⏳';
+async function fetchHFBenchmarks(modelId, silent = false) {
+  if (!silent) {
+    showBmState('loading');
+    $('fetchBtn').disabled = true;
+    $('fetchIcon').textContent = '⏳';
+  }
 
   const rawName   = modelId.split('/').pop();          // e.g. "Qwen3.6-35B-A3B-FP8"
   const cleanName = cleanForLeaderboard(rawName);      // e.g. "Qwen3.6-35B-A3B"
@@ -799,10 +831,14 @@ async function fetchHFBenchmarks(modelId) {
 
   } catch(e) {
     // Network completely down
-    showBmState('error', 'Impossible de contacter HuggingFace — vérifie ta connexion. (' + e.message + ')');
+    if (!silent) {
+      showBmState('error', 'Impossible de contacter HuggingFace — vérifie ta connexion. (' + e.message + ')');
+    }
   } finally {
-    $('fetchBtn').disabled  = false;
-    $('fetchIcon').textContent = '🔍';
+    if (!silent) {
+      $('fetchBtn').disabled  = false;
+      $('fetchIcon').textContent = '🔍';
+    }
   }
 }
 
