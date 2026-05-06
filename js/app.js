@@ -824,8 +824,23 @@ async function trySearch(url, hdrs) {
 function getLocalScores(modelId) {
   // Check if model has local scores defined
   const cleanId = modelId.toLowerCase().replace(/[\-_]/g, '');
+  
+  // First, try direct match with hfid from PRESETS
+  for (const [key, preset] of Object.entries(PRESETS || {})) {
+    if (preset.hfid && preset.hfid.toLowerCase().replace(/[\-_]/g, '') === cleanId) {
+      const localKey = key.replace(/[\-_]/g, '').toLowerCase();
+      for (const [scoreKey, scores] of Object.entries(LOCAL_SCORES || {})) {
+        const scoreKeyClean = scoreKey.toLowerCase().replace(/[\-_]/g, '');
+        if (scoreKeyClean === localKey || localKey.includes(scoreKeyClean) || scoreKeyClean.includes(localKey)) {
+          return { ...scores, modelLabel: scoreKey };
+        }
+      }
+    }
+  }
+  
+  // Fallback: try to match modelId directly
   for (const [key, scores] of Object.entries(LOCAL_SCORES || {})) {
-    const cleanKey = key.toLowerCase().replace(/[\-_]/g, '');
+    const cleanKey = key.toLowerCase().replace(/[\-_\s]/g, '');
     if (cleanId.includes(cleanKey) || cleanKey.includes(cleanId)) {
       return { ...scores, modelLabel: key };
     }

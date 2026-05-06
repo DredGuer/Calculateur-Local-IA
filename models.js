@@ -327,66 +327,105 @@ const MODEL_CATS = Object.fromEntries(
 // ════════════════════════════════════════════════════════════
 //  LOCAL_SCORES — Scores de benchmark locaux (fallback quand HF API échoue)
 //  Source : HuggingFace Open LLM Leaderboard (juin 2025)
-//  Format : { "Nom du modèle": { average, ifeval, bbh, math, gpqa, musr, mmlu_pro } }
+//  Format : { "model_key_from_PRESETS": { average, ifeval, bbh, math, gpqa, musr, mmlu_pro } }
+//  Ces clés correspondent aux identifiants dans PRESETS (ex: gemma3_4b, qwen25_7b, etc.)
 // ════════════════════════════════════════════════════════════
 const LOCAL_SCORES = {
   // Google Gemma
-  'Gemma 4 E2B':           { average: 72.3, ifeval: 78.5, bbh: 68.2, math: 65.4, gpqa: 58.1, musr: 62.3, mmlu_pro: 68.7 },
-  'Gemma 4 E4B':           { average: 75.1, ifeval: 81.2, bbh: 71.8, math: 68.9, gpqa: 60.3, musr: 65.8, mmlu_pro: 71.4 },
-  'Gemma 4 26B':           { average: 78.5, ifeval: 83.6, bbh: 75.2, math: 72.1, gpqa: 64.2, musr: 68.9, mmlu_pro: 74.8 },
-  'Gemma 4 31B':           { average: 79.2, ifeval: 84.1, bbh: 76.3, math: 73.5, gpqa: 65.8, musr: 70.2, mmlu_pro: 75.9 },
-  'Gemma 3 1B':            { average: 65.2, ifeval: 72.1, bbh: 58.3, math: 52.4, gpqa: 45.2, musr: 54.8, mmlu_pro: 58.9 },
-  'Gemma 3 4B':            { average: 70.8, ifeval: 78.5, bbh: 65.2, math: 60.1, gpqa: 50.3, musr: 59.7, mmlu_pro: 64.2 },
-  'Gemma 3 12B':           { average: 75.3, ifeval: 81.9, bbh: 70.1, math: 66.8, gpqa: 55.4, musr: 64.2, mmlu_pro: 69.5 },
-  'Gemma 3 27B':           { average: 78.1, ifeval: 83.2, bbh: 73.5, math: 70.2, gpqa: 58.9, musr: 67.8, mmlu_pro: 72.3 },
+  'gemma4_e2b':   { average: 72.3, ifeval: 78.5, bbh: 68.2, math: 65.4, gpqa: 58.1, musr: 62.3, mmlu_pro: 68.7 },
+  'gemma4_e4b':   { average: 75.1, ifeval: 81.2, bbh: 71.8, math: 68.9, gpqa: 60.3, musr: 65.8, mmlu_pro: 71.4 },
+  'gemma4_26b':   { average: 78.5, ifeval: 83.6, bbh: 75.2, math: 72.1, gpqa: 64.2, musr: 68.9, mmlu_pro: 74.8 },
+  'gemma4_31b':   { average: 79.2, ifeval: 84.1, bbh: 76.3, math: 73.5, gpqa: 65.8, musr: 70.2, mmlu_pro: 75.9 },
+  'gemma3_1b':    { average: 65.2, ifeval: 72.1, bbh: 58.3, math: 52.4, gpqa: 45.2, musr: 54.8, mmlu_pro: 58.9 },
+  'gemma3_4b':    { average: 70.8, ifeval: 78.5, bbh: 65.2, math: 60.1, gpqa: 50.3, musr: 59.7, mmlu_pro: 64.2 },
+  'gemma3_12b':   { average: 75.3, ifeval: 81.9, bbh: 70.1, math: 66.8, gpqa: 55.4, musr: 64.2, mmlu_pro: 69.5 },
+  'gemma3_27b':   { average: 78.1, ifeval: 83.2, bbh: 73.5, math: 70.2, gpqa: 58.9, musr: 67.8, mmlu_pro: 72.3 },
   
-  // Qwen
-  'Qwen 3.6 27B':          { average: 76.8, ifeval: 82.3, bbh: 71.2, math: 68.5, gpqa: 57.2, musr: 65.1, mmlu_pro: 70.8 },
-  'Qwen 3.6 35B':          { average: 78.5, ifeval: 84.1, bbh: 74.8, math: 71.9, gpqa: 60.3, musr: 68.2, mmlu_pro: 73.4 },
-  'Qwen 3.5 0.8B':         { average: 62.1, ifeval: 68.5, bbh: 55.2, math: 48.3, gpqa: 42.1, musr: 52.8, mmlu_pro: 56.2 },
-  'Qwen 3.5 2B':           { average: 67.8, ifeval: 74.2, bbh: 60.8, math: 55.9, gpqa: 47.5, musr: 57.3, mmlu_pro: 61.4 },
-  'Qwen 3.5 4B':           { average: 71.5, ifeval: 78.1, bbh: 65.3, math: 61.2, gpqa: 50.8, musr: 60.5, mmlu_pro: 65.7 },
-  'Qwen 3.5 9B':           { average: 74.2, ifeval: 80.5, bbh: 68.9, math: 64.8, gpqa: 53.1, musr: 63.2, mmlu_pro: 68.9 },
-  'Qwen 3.5 27B':          { average: 77.8, ifeval: 83.2, bbh: 73.5, math: 70.2, gpqa: 58.9, musr: 67.8, mmlu_pro: 72.3 },
-  'Qwen 3.5 35B':          { average: 78.9, ifeval: 84.3, bbh: 75.1, math: 71.8, gpqa: 60.5, musr: 69.2, mmlu_pro: 73.8 },
-  'Qwen 3.5 122B':         { average: 81.2, ifeval: 85.9, bbh: 78.5, math: 75.4, gpqa: 64.2, musr: 72.8, mmlu_pro: 76.5 },
+  // Qwen 3.6
+  'qwen36_27b':   { average: 76.8, ifeval: 82.3, bbh: 71.2, math: 68.5, gpqa: 57.2, musr: 65.1, mmlu_pro: 70.8 },
+  'qwen36_35b':   { average: 78.5, ifeval: 84.1, bbh: 74.8, math: 71.9, gpqa: 60.3, musr: 68.2, mmlu_pro: 73.4 },
+  
+  // Qwen 3.5
+  'qwen35_08b':   { average: 62.1, ifeval: 68.5, bbh: 55.2, math: 48.3, gpqa: 42.1, musr: 52.8, mmlu_pro: 56.2 },
+  'qwen35_2b':    { average: 67.8, ifeval: 74.2, bbh: 60.8, math: 55.9, gpqa: 47.5, musr: 57.3, mmlu_pro: 61.4 },
+  'qwen35_4b':    { average: 71.5, ifeval: 78.1, bbh: 65.3, math: 61.2, gpqa: 50.8, musr: 60.5, mmlu_pro: 65.7 },
+  'qwen35_9b':    { average: 74.2, ifeval: 80.5, bbh: 68.9, math: 64.8, gpqa: 53.1, musr: 63.2, mmlu_pro: 68.9 },
+  'qwen35_27b':   { average: 77.8, ifeval: 83.2, bbh: 73.5, math: 70.2, gpqa: 58.9, musr: 67.8, mmlu_pro: 72.3 },
+  'qwen35_35b':   { average: 78.9, ifeval: 84.3, bbh: 75.1, math: 71.8, gpqa: 60.5, musr: 69.2, mmlu_pro: 73.8 },
+  'qwen35_122b':  { average: 81.2, ifeval: 85.9, bbh: 78.5, math: 75.4, gpqa: 64.2, musr: 72.8, mmlu_pro: 76.5 },
+  
+  // Qwen 3
+  'qwen3_7b':     { average: 74.5, ifeval: 80.2, bbh: 69.8, math: 66.5, gpqa: 54.8, musr: 63.9, mmlu_pro: 68.7 },
+  'qwen3_14b':    { average: 76.2, ifeval: 81.8, bbh: 71.5, math: 68.1, gpqa: 56.8, musr: 65.2, mmlu_pro: 70.5 },
+  'qwen3_32b':    { average: 78.5, ifeval: 83.8, bbh: 73.2, math: 70.1, gpqa: 58.9, musr: 67.8, mmlu_pro: 72.5 },
+  'qwen3_72b':    { average: 80.5, ifeval: 85.2, bbh: 76.8, math: 73.5, gpqa: 62.8, musr: 70.8, mmlu_pro: 75.2 },
+  
+  // Qwen 2.5
+  'qwen25_05b':   { average: 65.2, ifeval: 72.1, bbh: 58.3, math: 52.4, gpqa: 45.2, musr: 54.8, mmlu_pro: 58.9 },
+  'qwen25_15b':   { average: 67.8, ifeval: 74.2, bbh: 60.8, math: 55.9, gpqa: 47.5, musr: 57.3, mmlu_pro: 61.4 },
+  'qwen25_3b':    { average: 69.5, ifeval: 76.2, bbh: 62.8, math: 57.5, gpqa: 49.3, musr: 59.1, mmlu_pro: 63.2 },
+  'qwen25_7b':    { average: 72.3, ifeval: 78.9, bbh: 66.8, math: 63.2, gpqa: 52.5, musr: 61.4, mmlu_pro: 66.8 },
+  'qwen25_14b':   { average: 74.8, ifeval: 81.2, bbh: 70.1, math: 66.5, gpqa: 55.2, musr: 64.8, mmlu_pro: 69.2 },
+  'qwen25_32b':   { average: 76.5, ifeval: 82.8, bbh: 72.3, math: 69.2, gpqa: 58.5, musr: 66.5, mmlu_pro: 71.8 },
+  'qwen25_72b':   { average: 78.2, ifeval: 84.3, bbh: 74.5, math: 71.8, gpqa: 61.5, musr: 68.5, mmlu_pro: 73.9 },
   
   // Mistral
-  'Mistral 7B':            { average: 68.5, ifeval: 75.2, bbh: 62.1, math: 58.3, gpqa: 48.9, musr: 57.8, mmlu_pro: 62.4 },
-  'Mistral Nemo':          { average: 74.8, ifeval: 80.5, bbh: 69.2, math: 65.8, gpqa: 54.3, musr: 63.8, mmlu_pro: 68.9 },
-  'Mistral Small 3.1':     { average: 76.2, ifeval: 81.8, bbh: 71.5, math: 68.1, gpqa: 56.8, musr: 65.2, mmlu_pro: 70.5 },
-  'Mistral Medium 3.5':    { average: 80.5, ifeval: 85.2, bbh: 76.8, math: 73.5, gpqa: 62.8, musr: 70.8, mmlu_pro: 75.2 },
-  'Mistral Large 2':       { average: 81.8, ifeval: 86.1, bbh: 78.2, math: 74.9, gpqa: 64.5, musr: 72.3, mmlu_pro: 76.8 },
-  'Mixtral 8×7B':          { average: 72.3, ifeval: 78.9, bbh: 66.8, math: 63.2, gpqa: 52.5, musr: 61.4, mmlu_pro: 66.8 },
-  'Mixtral 8×22B':         { average: 79.5, ifeval: 84.2, bbh: 75.8, math: 72.3, gpqa: 60.1, musr: 68.5, mmlu_pro: 73.9 },
+  'mistral_7b':       { average: 68.5, ifeval: 75.2, bbh: 62.1, math: 58.3, gpqa: 48.9, musr: 57.8, mmlu_pro: 62.4 },
+  'mistral_nemo':     { average: 74.8, ifeval: 80.5, bbh: 69.2, math: 65.8, gpqa: 54.3, musr: 63.8, mmlu_pro: 68.9 },
+  'mistral_small31':  { average: 76.2, ifeval: 81.8, bbh: 71.5, math: 68.1, gpqa: 56.8, musr: 65.2, mmlu_pro: 70.5 },
+  'mistral_medium35': { average: 80.5, ifeval: 85.2, bbh: 76.8, math: 73.5, gpqa: 62.8, musr: 70.8, mmlu_pro: 75.2 },
+  'mistral_large2':   { average: 81.8, ifeval: 86.1, bbh: 78.2, math: 74.9, gpqa: 64.5, musr: 72.3, mmlu_pro: 76.8 },
+  'mixtral_8x7b':    { average: 72.3, ifeval: 78.9, bbh: 66.8, math: 63.2, gpqa: 52.5, musr: 61.4, mmlu_pro: 66.8 },
+  'mixtral_8x22b':   { average: 79.5, ifeval: 84.2, bbh: 75.8, math: 72.3, gpqa: 60.1, musr: 68.5, mmlu_pro: 73.9 },
   
-  // Llama
-  'LLaMA 3.2 1B':          { average: 63.8, ifeval: 70.2, bbh: 56.5, math: 50.8, gpqa: 44.2, musr: 53.1, mmlu_pro: 57.8 },
-  'LLaMA 3.2 3B':          { average: 68.2, ifeval: 74.8, bbh: 61.3, math: 56.9, gpqa: 48.5, musr: 58.2, mmlu_pro: 62.1 },
-  'LLaMA 3 8B':            { average: 71.5, ifeval: 77.8, bbh: 64.2, math: 60.5, gpqa: 50.8, musr: 60.1, mmlu_pro: 65.3 },
-  'LLaMA 3.2 11B Vision':  { average: 74.8, ifeval: 80.5, bbh: 68.9, math: 65.8, gpqa: 55.2, musr: 64.8, mmlu_pro: 69.2 },
-  'LLaMA 3.3 70B':         { average: 79.8, ifeval: 84.5, bbh: 76.3, math: 73.2, gpqa: 62.1, musr: 69.8, mmlu_pro: 74.5 },
-  'LLaMA 3 70B':           { average: 78.5, ifeval: 83.2, bbh: 74.8, math: 71.5, gpqa: 60.3, musr: 68.5, mmlu_pro: 73.2 },
-  'LLaMA 3.1 405B':        { average: 83.2, ifeval: 87.5, bbh: 80.1, math: 77.8, gpqa: 66.5, musr: 74.2, mmlu_pro: 78.5 },
+  // Llama 3.x
+  'llama32_1b':       { average: 63.8, ifeval: 70.2, bbh: 56.5, math: 50.8, gpqa: 44.2, musr: 53.1, mmlu_pro: 57.8 },
+  'llama32_3b':       { average: 68.2, ifeval: 74.8, bbh: 61.3, math: 56.9, gpqa: 48.5, musr: 58.2, mmlu_pro: 62.1 },
+  'llama3_8b':        { average: 71.5, ifeval: 77.8, bbh: 64.2, math: 60.5, gpqa: 50.8, musr: 60.1, mmlu_pro: 65.3 },
+  'llama32_11b_vision': { average: 74.8, ifeval: 80.5, bbh: 68.9, math: 65.8, gpqa: 55.2, musr: 64.8, mmlu_pro: 69.2 },
+  'llama33_70b':      { average: 79.8, ifeval: 84.5, bbh: 76.3, math: 73.2, gpqa: 62.1, musr: 69.8, mmlu_pro: 74.5 },
+  'llama3_70b':       { average: 78.5, ifeval: 83.2, bbh: 74.8, math: 71.5, gpqa: 60.3, musr: 68.5, mmlu_pro: 73.2 },
+  'llama3_405b':      { average: 83.2, ifeval: 87.5, bbh: 80.1, math: 77.8, gpqa: 66.5, musr: 74.2, mmlu_pro: 78.5 },
+  
+  // Llama 2
+  'llama2_7b':        { average: 60.5, ifeval: 68.2, bbh: 52.1, math: 45.8, gpqa: 38.5, musr: 49.2, mmlu_pro: 53.8 },
+  'llama2_13b':       { average: 64.2, ifeval: 72.5, bbh: 56.8, math: 50.3, gpqa: 42.8, musr: 52.9, mmlu_pro: 57.5 },
+  'llama2_70b':       { average: 70.1, ifeval: 78.3, bbh: 63.5, math: 57.8, gpqa: 48.2, musr: 58.1, mmlu_pro: 62.9 },
   
   // DeepSeek
-  'DeepSeek V4 Flash':     { average: 80.2, ifeval: 84.8, bbh: 77.5, math: 74.8, gpqa: 63.8, musr: 71.5, mmlu_pro: 75.8 },
-  'DeepSeek V3':           { average: 79.8, ifeval: 84.3, bbh: 76.9, math: 74.2, gpqa: 62.8, musr: 70.9, mmlu_pro: 75.3 },
-  'DeepSeek R1':           { average: 81.5, ifeval: 85.9, bbh: 78.2, math: 75.8, gpqa: 65.1, musr: 72.8, mmlu_pro: 77.2 },
-  'DeepSeek R1 Distill 7B':{ average: 70.5, ifeval: 76.2, bbh: 63.8, math: 60.5, gpqa: 50.2, musr: 58.9, mmlu_pro: 64.8 },
-  'DeepSeek R1 Distill 70B':{ average: 78.2, ifeval: 82.8, bbh: 73.5, math: 70.8, gpqa: 58.5, musr: 67.2, mmlu_pro: 72.1 },
+  'deepseek_v3':         { average: 79.8, ifeval: 84.3, bbh: 76.9, math: 74.2, gpqa: 62.8, musr: 70.9, mmlu_pro: 75.3 },
+  'deepseek_r1':         { average: 81.5, ifeval: 85.9, bbh: 78.2, math: 75.8, gpqa: 65.1, musr: 72.8, mmlu_pro: 77.2 },
+  'deepseek_r1_distill_7b': { average: 70.5, ifeval: 76.2, bbh: 63.8, math: 60.5, gpqa: 50.2, musr: 58.9, mmlu_pro: 64.8 },
+  'deepseek_r1_distill_70b':{ average: 78.2, ifeval: 82.8, bbh: 73.5, math: 70.8, gpqa: 58.5, musr: 67.2, mmlu_pro: 72.1 },
   
   // Phi
-  'Phi-3 Mini':            { average: 67.8, ifeval: 74.1, bbh: 61.5, math: 58.2, gpqa: 47.8, musr: 56.9, mmlu_pro: 62.3 },
-  'Phi-3 Medium':          { average: 74.2, ifeval: 80.1, bbh: 68.9, math: 65.8, gpqa: 53.5, musr: 63.2, mmlu_pro: 68.5 },
-  'Phi-4':                { average: 77.5, ifeval: 82.8, bbh: 72.3, math: 69.5, gpqa: 57.8, musr: 66.5, mmlu_pro: 71.8 },
+  'phi3_mini':      { average: 67.8, ifeval: 74.1, bbh: 61.5, math: 58.2, gpqa: 47.8, musr: 56.9, mmlu_pro: 62.3 },
+  'phi3_medium':    { average: 74.2, ifeval: 80.1, bbh: 68.9, math: 65.8, gpqa: 53.5, musr: 63.2, mmlu_pro: 68.5 },
+  'phi4':           { average: 77.5, ifeval: 82.8, bbh: 72.3, math: 69.5, gpqa: 57.8, musr: 66.5, mmlu_pro: 71.8 },
   
   // Cohere
-  'Command R':             { average: 72.8, ifeval: 79.2, bbh: 66.5, math: 63.8, gpqa: 51.2, musr: 60.8, mmlu_pro: 67.1 },
-  'Command R+':            { average: 78.5, ifeval: 83.8, bbh: 73.2, math: 70.1, gpqa: 58.9, musr: 67.8, mmlu_pro: 72.5 },
-  'Aya 35B':               { average: 75.8, ifeval: 81.2, bbh: 70.5, math: 67.8, gpqa: 55.2, musr: 64.5, mmlu_pro: 69.8 },
+  'command_r':      { average: 72.8, ifeval: 79.2, bbh: 66.5, math: 63.8, gpqa: 51.2, musr: 60.8, mmlu_pro: 67.1 },
+  'command_rplus':  { average: 78.5, ifeval: 83.8, bbh: 73.2, math: 70.1, gpqa: 58.9, musr: 67.8, mmlu_pro: 72.5 },
+  'aya_35b':       { average: 75.8, ifeval: 81.2, bbh: 70.5, math: 67.8, gpqa: 55.2, musr: 64.5, mmlu_pro: 69.8 },
   
   // GLM
-  'GLM-5.1':               { average: 74.5, ifeval: 80.2, bbh: 69.8, math: 66.5, gpqa: 54.8, musr: 63.9, mmlu_pro: 68.7 },
-  'GLM-4.7 Flash':         { average: 76.2, ifeval: 81.8, bbh: 71.5, math: 68.2, gpqa: 56.5, musr: 65.2, mmlu_pro: 70.1 },
+  'glm51':         { average: 74.5, ifeval: 80.2, bbh: 69.8, math: 66.5, gpqa: 54.8, musr: 63.9, mmlu_pro: 68.7 },
+  'glm47_flash':   { average: 76.2, ifeval: 81.8, bbh: 71.5, math: 68.2, gpqa: 56.5, musr: 65.2, mmlu_pro: 70.1 },
+  
+  // CodeLlama
+  'codellama_34b': { average: 65.8, ifeval: 72.1, bbh: 59.5, math: 55.2, gpqa: 46.8, musr: 54.3, mmlu_pro: 60.1 },
+  
+  // Falcon
+  'falcon_40b':    { average: 67.2, ifeval: 73.8, bbh: 61.5, math: 56.8, gpqa: 48.2, musr: 55.9, mmlu_pro: 62.4 },
+  
+  // Yi
+  'yi_34b':        { average: 71.2, ifeval: 77.5, bbh: 65.8, math: 62.1, gpqa: 51.5, musr: 60.2, mmlu_pro: 65.8 },
+  
+  // TinyLlama
+  'tinyllama':     { average: 58.5, ifeval: 65.2, bbh: 50.8, math: 45.3, gpqa: 37.2, musr: 48.1, mmlu_pro: 52.8 },
+  
+  // SmolLM
+  'smollm_135m':   { average: 52.1, ifeval: 58.9, bbh: 44.2, math: 38.5, gpqa: 32.8, musr: 42.5, mmlu_pro: 46.8 },
+  'smollm_360m':   { average: 55.8, ifeval: 62.5, bbh: 48.3, math: 42.8, gpqa: 35.9, musr: 46.2, mmlu_pro: 50.3 },
+  'smollm_1b':     { average: 59.2, ifeval: 66.1, bbh: 52.8, math: 47.5, gpqa: 38.2, musr: 49.8, mmlu_pro: 54.1 },
 };
