@@ -683,29 +683,67 @@ async function fetchBenchmarks() {
 function cleanForLeaderboard(name) {
   return name
     // quantization formats
-    .replace(/[-_]?(fp8|fp16|fp32|bf16|int4|int8|w4a16|w8a16|awq|gptq|gguf|ggml|exl2|hqq|nf4|q4|q8)/gi, '')
+    .replace(/[-_]?(fp8|fp16|fp32|bf16|int4|int8|w4a16|w8a16|awq|gptq|gguf|ggml|exl2|hqq|nf4|q[2468]_?[km]?|q\d)/gi, '')
     // variant suffixes
     .replace(/[-_]?(instruct|chat|it|hf|turbo|plus|ultra|lite|mini|nano|base|v\d[\d.]*)/gi, '')
+    // remove K/M suffixes (_K, _M, _K_M, etc.)
+    .replace(/[-_]+[km]\d?/gi, '')
     // trailing separators
     .replace(/[-_\.]+$/g, '')
     .trim();
 }
 
-// Safe fetch with timeout — avoids hanging on HF API flakiness
-async function safeFetch(url, opts = {}, timeoutMs = 8000) {
+// Safe fetch with timeout and retry — avoids hanging on HF API flakiness
+async function safeFetch(url, opts = {}, timeoutMs = 8000, retries = 2, retryDelay = 1000) {
   const ctrl = new AbortController();
   const tid  = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     const res = await fetch(url, { ...opts, signal: ctrl.signal });
     clearTimeout(tid);
+    
+    // Retry on index loading error (common with HF datasets)
+    if (retries > 0 && res.status === 200) {
+      const text = await res.clone().text();
+      if (text.includes('dataset index is loading') || text.includes('is not accessible')) {
+        await new Promise(r => setTimeout(r, retryDelay));
+        return await safeFetch(url, opts, timeoutMs, retries - 1, retryDelay * 2);
+      }
+    }
+    
     return res;
   } catch(e) {
     clearTimeout(tid);
+    if (retries > 0) {
+      await new Promise(r => setTimeout(r, retryDelay));
+      return await safeFetch(url, opts, timeoutMs, retries - 1, retryDelay * 2);
+    }
     throw e;
   }
 }
 
-// ─── MAIN FETCH (4-strategy cascade) ─────────────────────
+// Try to extract scores from model card description (fallback)
+function extractScoresFromDescription(description) {
+  if (!description) return null;
+  const scores = {};
+  const patterns = {
+    'Average': /Average[\s\-:]+(\d+\.?\d*)/i,
+    'IFEval': /IFEval[\s\-:]+(\d+\.?\d*)/i,
+    'BBH': /BBH[\s\-:]+(\d+\.?\d*)/i,
+    'MATH': /MATH[\s\-:]+(\d+\.?\d*)/i,
+    'GPQA': /GPQA[\s\-:]+(\d+\.?\d*)/i,
+    'MuSR': /MuSR[\s\-:]+(\d+\.?\d*)/i,
+    'MMLU': /MMLU[\s\-:]+(\d+\.?\d*)/i,
+  };
+  for (const [key, pattern] of Object.entries(patterns)) {
+    const match = description.match(pattern);
+    if (match) {
+      scores[key] = parseFloat(match[1]);
+    }
+  }
+  return Object.keys(scores).length > 0 ? scores : null;
+}
+
+// ─── MAIN FETCH (5-strategy cascade) ─────────────────────
 async function fetchHFBenchmarks(modelId) {
   showBmState('loading');
   $('fetchBtn').disabled = true;
@@ -732,7 +770,26 @@ async function fetchHFBenchmarks(modelId) {
     if (!rows && baseName.length > 3)
       rows = await trySearch(HF_SEARCH + encodeURIComponent(baseName), hdrs);
 
-    // ── STRATEGY 4 : HF Hub API fallback (model metadata) ─
+    // ── STRATEGY 4 : Local scores database ──────────────
+    if (!rows) {
+      const local = getLocalScores(modelId);
+      if (local) {
+        const scores = {
+          'Average': local.average ?? local.Average ?? null,
+          'IFEval': local.ifeval ?? local.IFEval ?? null,
+          'BBH': local.bbh ?? local.BBH ?? null,
+          'MATH Lvl 5': local.math ?? local.MATH ?? local['MATH Lvl 5'] ?? null,
+          'GPQA': local.gpqa ?? local.GPQA ?? null,
+          'MuSR': local.musr ?? local.MuSR ?? null,
+          'MMLU-PRO': local.mmlu_pro ?? local.mmlu ?? local.MMLU ?? local['MMLU-PRO'] ?? null,
+        };
+        lastBmData = { scores, modelLabel: local.modelLabel || modelId };
+        renderBenchmarks(scores, local.modelLabel || modelId);
+        return;
+      }
+    }
+
+    // ── STRATEGY 5 : HF Hub API fallback (model metadata + description parsing) ─
     if (!rows) {
       await showHubFallback(modelId);
       return;
@@ -755,11 +812,28 @@ async function trySearch(url, hdrs) {
     const res = await safeFetch(url, { headers: hdrs });
     if (!res.ok) return null;           // 4xx, 5xx → try next strategy
     const data = await res.json();
+    // Handle error responses from HF
+    if (data.error && (data.error.includes('loading') || data.error.includes('not accessible'))) {
+      return null;
+    }
     return data.rows?.length ? data.rows : null;
   } catch { return null }
 }
 
-// Strategy 4 : HF Hub model card API
+// Strategy 5: Try to fetch from local scores database
+function getLocalScores(modelId) {
+  // Check if model has local scores defined
+  const cleanId = modelId.toLowerCase().replace(/[\-_]/g, '');
+  for (const [key, scores] of Object.entries(LOCAL_SCORES || {})) {
+    const cleanKey = key.toLowerCase().replace(/[\-_]/g, '');
+    if (cleanId.includes(cleanKey) || cleanKey.includes(cleanId)) {
+      return { ...scores, modelLabel: key };
+    }
+  }
+  return null;
+}
+
+// Strategy 5 : HF Hub model card API + try to extract scores from description
 async function showHubFallback(modelId) {
   try {
     const res = await safeFetch(
@@ -774,6 +848,25 @@ async function showHubFallback(modelId) {
     }
 
     const m = await res.json();
+
+    // Try to extract scores from model description
+    const descScores = extractScoresFromDescription(m.description || m.cardData?.description);
+    
+    if (descScores) {
+      // Found scores in description - render them
+      const scores = {
+        'Average': descScores.Average ?? descScores.average ?? null,
+        'IFEval': descScores.IFEval ?? descScores.ifeval ?? null,
+        'BBH': descScores.BBH ?? descScores.bbh ?? null,
+        'MATH Lvl 5': descScores['MATH'] ?? descScores.math ?? descScores['MATH Lvl 5'] ?? null,
+        'GPQA': descScores.GPQA ?? descScores.gpqa ?? null,
+        'MuSR': descScores.MuSR ?? descScores.musr ?? null,
+        'MMLU-PRO': descScores['MMLU-PRO'] ?? descScores.MMLU ?? descScores.mmlu_pro ?? descScores.mmlu ?? null,
+      };
+      lastBmData = { scores, modelLabel: m.id || modelId };
+      renderBenchmarks(scores, m.id || modelId);
+      return;
+    }
 
     // Populate Hub fallback UI
     $('bmHubLabel').textContent = m.id || modelId;
@@ -802,7 +895,12 @@ async function showHubFallback(modelId) {
       <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px">${
         tags.map(t=>`<span class="tag" style="font-size:.68rem">${t}</span>`).join('')
       }</div>
-    </div>` : '');
+    </div>` : '') + `
+    <div class="sc" style="grid-column:1/-1;text-align:center;margin-top:10px;">
+      <div style="font-size:.8rem;color:var(--muted)">
+        ⚠️ Scores non trouvés dans le leaderboard. <a href="https://huggingface.co/spaces/open-llm-leaderboard/open_llm_leaderboard" target="_blank" style="color:var(--accent)">Vérifier manuellement</a>.
+      </div>
+    </div>`;
 
     showBmState('hubfallback');
 
@@ -815,21 +913,46 @@ async function showHubFallback(modelId) {
 function processHFRows(rows, requestedId) {
   const target = requestedId.toLowerCase();
   let best = rows[0];
+  
+  // Improved matching - try multiple fields and handle case sensitivity
   for (const r of rows) {
-    const fn = (r.row.fullname||r.row.model||r.row.id||'').toLowerCase();
-    if (fn===target||fn.includes(target.split('/').pop())) { best=r; break }
+    const row = r.row || r;
+    const fn = (row.fullname || row.model || row.id || row.name || '').toLowerCase();
+    const targetBase = target.split('/').pop().replace(/[-_]/g, '');
+    const fnBase = fn.split('/').pop().replace(/[-_]/g, '');
+    
+    if (fn === target || fnBase === targetBase || fn.includes(targetBase) || targetBase.includes(fnBase)) {
+      best = r;
+      break;
+    }
   }
-  const row = best.row;
-  const scores = {
-    'Average':    parseFloat(row['Average ⬆️']??row['average']??row['Average']??null),
-    'IFEval':     parseFloat(row['IFEval']??null),
-    'BBH':        parseFloat(row['BBH']??null),
-    'MATH Lvl 5': parseFloat(row['MATH Lvl 5']??row['MATH']??null),
-    'GPQA':       parseFloat(row['GPQA']??null),
-    'MuSR':       parseFloat(row['MuSR']??null),
-    'MMLU-PRO':   parseFloat(row['MMLU-PRO']??row['MMLU']??null),
+  
+  const row = best.row || best;
+  
+  // Try to get model label from various fields
+  const modelLabel = row.fullname || row.model || row.id || row.name || requestedId;
+  
+  // Extract scores - handle various column names and formats
+  const getScore = (field, ...alternatives) => {
+    for (const col of [field, ...alternatives]) {
+      if (row[col] !== undefined && row[col] !== null) {
+        const val = parseFloat(row[col]);
+        if (!isNaN(val)) return val;
+      }
+    }
+    return null;
   };
-  const modelLabel = row.fullname||row.model||row.id||requestedId;
+  
+  const scores = {
+    'Average':    getScore('Average ⬆️', 'average', 'Average', 'avg'),
+    'IFEval':     getScore('IFEval', 'ifeval', 'IF Eval'),
+    'BBH':        getScore('BBH', 'bbh', 'BBH '),
+    'MATH Lvl 5': getScore('MATH Lvl 5', 'MATH', 'math', 'Math'),
+    'GPQA':       getScore('GPQA', 'gpqa', 'GPQA '),
+    'MuSR':       getScore('MuSR', 'musr', 'MuSR '),
+    'MMLU-PRO':   getScore('MMLU-PRO', 'MMLU', 'mmlu_pro', 'mmlu'),
+  };
+  
   lastBmData = { scores, modelLabel };
   renderBenchmarks(scores, modelLabel);
 }
