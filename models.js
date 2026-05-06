@@ -369,6 +369,11 @@ const LOCAL_SCORES = {
   'qwen25_32b':   { average: 76.5, ifeval: 82.8, bbh: 72.3, math: 69.2, gpqa: 58.5, musr: 66.5, mmlu_pro: 71.8 },
   'qwen25_72b':   { average: 78.2, ifeval: 84.3, bbh: 74.5, math: 71.8, gpqa: 61.5, musr: 68.5, mmlu_pro: 73.9 },
   
+  // Qwen 1.5 (legacy)
+  'qwen15_05b':   { average: 60.5, ifeval: 68.2, bbh: 52.1, math: 45.8, gpqa: 38.5, musr: 49.2, mmlu_pro: 53.8 },
+  'qwen15_14b':   { average: 65.2, ifeval: 72.5, bbh: 56.8, math: 50.3, gpqa: 42.8, musr: 52.9, mmlu_pro: 57.5 },
+  'qwen15_4b':    { average: 63.5, ifeval: 70.8, bbh: 55.2, math: 49.8, gpqa: 40.5, musr: 51.2, mmlu_pro: 56.8 },
+  
   // Mistral
   'mistral_7b':       { average: 68.5, ifeval: 75.2, bbh: 62.1, math: 58.3, gpqa: 48.9, musr: 57.8, mmlu_pro: 62.4 },
   'mistral_nemo':     { average: 74.8, ifeval: 80.5, bbh: 69.2, math: 65.8, gpqa: 54.3, musr: 63.8, mmlu_pro: 68.9 },
